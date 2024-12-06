@@ -2,141 +2,232 @@ import pygame
 import sys
 import heapq
 
-# Inicialización de Pygame
-pygame.init()
+# Configuraciones iniciales
+ANCHO_VENTANA = 800
+VENTANA = pygame.display.set_mode((ANCHO_VENTANA, ANCHO_VENTANA))
+pygame.display.set_caption("Visualización de Nodos")
 
-# Tamaño de la ventana
-ANCHO, ALTO = 480, 480
-ventana = pygame.display.set_mode((ANCHO, ALTO))
-pygame.display.set_caption("Algoritmo A*")
-
-# Colores
+# Colores (RGB)
 BLANCO = (255, 255, 255)
 NEGRO = (0, 0, 0)
+GRIS = (128, 128, 128)
 VERDE = (0, 255, 0)
-AZUL = (0, 0, 255)
-AMARILLO = (255,255,53)
+ROJO = (255, 0, 0)
+NARANJA = (255, 165, 0)
+PURPURA = (128, 0, 128)
 
-# Dimensiones del grid
-tamano_celda = 40
-columnas = 12
-filas = 12
+class Nodo:
+    def __init__(self, fila, col, ancho, total_filas):
+        self.fila = fila
+        self.col = col
+        self.x = fila * ancho
+        self.y = col * ancho
+        self.color = BLANCO
+        self.ancho = ancho
+        self.total_filas = total_filas
+        self.vecinos = []
 
-# Nodos de inicio y final
-inicio = (0, 0)
-fin = (columnas - 1, filas - 1)
+    def get_pos(self):
+        return self.fila, self.col
 
-# Obstáculos
-obstaculos = [[False for _ in range(filas)] for _ in range(columnas)]
+    def es_pared(self):
+        return self.color == NEGRO
 
-# Lista cerrada
-lista_cerrada = set()
+    def es_inicio(self):
+        return self.color == NARANJA
 
-# Heurística de Manhattan
+    def es_fin(self):
+        return self.color == PURPURA
+
+    def restablecer(self):
+        self.color = BLANCO
+
+    def hacer_inicio(self):
+        self.color = NARANJA
+
+    def hacer_pared(self):
+        self.color = NEGRO
+
+    def hacer_fin(self):
+        self.color = PURPURA
+
+    def hacer_cerrado(self):
+        self.color = ROJO
+
+    def hacer_camino(self):
+        self.color = VERDE
+
+    def dibujar(self, ventana):
+        pygame.draw.rect(ventana, self.color, (self.x, self.y, self.ancho, self.ancho))
+
+    def actualizar_vecinos(self, grid):
+        self.vecinos = []
+        if self.fila < self.total_filas - 1 and not grid[self.fila + 1][self.col].es_pared():
+            self.vecinos.append(grid[self.fila + 1][self.col])
+        if self.fila > 0 and not grid[self.fila - 1][self.col].es_pared():
+            self.vecinos.append(grid[self.fila - 1][self.col])
+        if self.col < self.total_filas - 1 and not grid[self.fila][self.col + 1].es_pared():
+            self.vecinos.append(grid[self.fila][self.col + 1])
+        if self.col > 0 and not grid[self.fila][self.col - 1].es_pared():
+            self.vecinos.append(grid[self.fila][self.col - 1])
+
+# Distancia de Manhattan
 def heuristica(a, b):
-    (x1, y1) = a
-    (x2, y2) = b
+    x1, y1 = a
+    x2, y2 = b
     return abs(x1 - x2) + abs(y1 - y2)
 
-# Implementación de A*
-def a_estrella(inicio, fin):
+# Implementación del algoritmo A*
+def algoritmo_a_estrella(dibujar, grid, inicio, fin):
+    contador = 0
     lista_abierta = []
-    heapq.heappush(lista_abierta, (0, inicio))
+    heapq.heappush(lista_abierta, (0, contador, inicio))
     came_from = {}
-    g_score = {inicio: 0}
-    f_score = {inicio: heuristica(inicio, fin)}
-    en_lista_abierta = {inicio}
+    g_score = {nodo: float("inf") for fila in grid for nodo in fila}
+    g_score[inicio] = 0
+    f_score = {nodo: float("inf") for fila in grid for nodo in fila}
+    f_score[inicio] = heuristica(inicio.get_pos(), fin.get_pos())
+    lista_abierta_hash = {inicio}
+    lista_cerrada = set()
 
     while lista_abierta:
-        _, actual = heapq.heappop(lista_abierta)
-        en_lista_abierta.remove(actual)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        actual = heapq.heappop(lista_abierta)[2]
+        lista_abierta_hash.remove(actual)
 
         if actual == fin:
-            return reconstruir_camino(came_from, actual)
+            reconstruir_camino(came_from, fin, dibujar)
+            imprimir_lista_cerrada(lista_cerrada)
+            return True
 
-        lista_cerrada.add(actual)
-
-        vecinos = obtener_vecinos(actual)
-        for vecino in vecinos:
-            if vecino in lista_cerrada or obstaculos[vecino[0]][vecino[1]]:
-                continue
-
+        for vecino in actual.vecinos:
             tentative_g_score = g_score[actual] + 1
 
-            if vecino not in en_lista_abierta or tentative_g_score < g_score.get(vecino, float('inf')):
+            if tentative_g_score < g_score[vecino]:
                 came_from[vecino] = actual
                 g_score[vecino] = tentative_g_score
-                f_score[vecino] = tentative_g_score + heuristica(vecino, fin)
-                if vecino not in en_lista_abierta:
-                    heapq.heappush(lista_abierta, (f_score[vecino], vecino))
-                    en_lista_abierta.add(vecino)
+                f_score[vecino] = tentative_g_score + heuristica(vecino.get_pos(), fin.get_pos())
+                if vecino not in lista_abierta_hash:
+                    contador += 1
+                    heapq.heappush(lista_abierta, (f_score[vecino], contador, vecino))
+                    lista_abierta_hash.add(vecino)
 
-    return None
+        dibujar()
 
-# Reconstrucción del camino final
-def reconstruir_camino(came_from, actual):
-    camino = [actual]
+        if actual != inicio:
+            actual.hacer_cerrado()
+            lista_cerrada.add(actual)
+
+    return False
+
+# Reconstrucción del camino encontrado
+def reconstruir_camino(came_from, actual, dibujar):
     while actual in came_from:
         actual = came_from[actual]
-        camino.append(actual)
-    camino.reverse()
-    return camino
+        if actual.color != NARANJA:
+            actual.hacer_camino()
+        dibujar()
 
-# Obtener vecinos de un nodo dado
-def obtener_vecinos(nodo):
-    (x, y) = nodo
-    vecinos = []
-    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-        nx, ny = x + dx, y + dy
-        if 0 <= nx < columnas and 0 <= ny < filas:
-            vecinos.append((nx, ny))
-    return vecinos
-
-# Imprimir lista cerrada
-def imprimir_lista_cerrada():
+# Imprimir la lista cerrada
+def imprimir_lista_cerrada(lista_cerrada):
     print("Lista Cerrada:")
     print("+--------+--------+")
-    print("|   X    |   Y    |")
+    print("|   Fila |   Col  |")
     print("+--------+--------+")
-    for nodo in sorted(lista_cerrada):
-        x, y = nodo
-        print(f"| {x:6} | {y:6} |")
+    for nodo in sorted(lista_cerrada, key=lambda n: (n.fila, n.col)):
+        print(f"| {nodo.fila:6} | {nodo.col:6} |")
     print("+--------+--------+")
 
-# Ciclo principal
-camino = []
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            x, y = pygame.mouse.get_pos()
-            grid_x, grid_y = x // tamano_celda, y // tamano_celda
-            obstaculos[grid_x][grid_y] = not obstaculos[grid_x][grid_y]
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                lista_cerrada.clear()
-                camino = a_estrella(inicio, fin) or []
-                imprimir_lista_cerrada()
+# Crear la grilla de nodos
+def crear_grid(filas, ancho):
+    grid = []
+    ancho_nodo = ancho // filas
+    for i in range(filas):
+        grid.append([])
+        for j in range(filas):
+            nodo = Nodo(i, j, ancho_nodo, filas)
+            grid[i].append(nodo)
+    return grid
 
-    # Rellenar la ventana
+# Dibujar la grilla
+def dibujar_grid(ventana, filas, ancho):
+    ancho_nodo = ancho // filas
+    for i in range(filas):
+        pygame.draw.line(ventana, GRIS, (0, i * ancho_nodo), (ancho, i * ancho_nodo))
+        for j in range(filas):
+            pygame.draw.line(ventana, GRIS, (j * ancho_nodo, 0), (j * ancho_nodo, ancho))
+
+# Dibujar todo en la ventana
+def dibujar(ventana, grid, filas, ancho):
     ventana.fill(BLANCO)
+    for fila in grid:
+        for nodo in fila:
+            nodo.dibujar(ventana)
 
-    # Dibujar el grid
-    for x in range(columnas):
-        for y in range(filas):
-            color = NEGRO if obstaculos[x][y] else BLANCO
-            pygame.draw.rect(ventana, color, (x * tamano_celda, y * tamano_celda, tamano_celda, tamano_celda))
-            pygame.draw.rect(ventana, NEGRO, (x * tamano_celda, y * tamano_celda, tamano_celda, tamano_celda), 1)
+    dibujar_grid(ventana, filas, ancho)
+    pygame.display.update()
 
-    # Dibujar el camino encontrado
-    for (x, y) in camino:
-        pygame.draw.rect(ventana, AMARILLO, (x * tamano_celda, y * tamano_celda, tamano_celda, tamano_celda))
+# Obtener la posición de click
+def obtener_click_pos(pos, filas, ancho):
+    ancho_nodo = ancho // filas
+    y, x = pos
+    fila = y // ancho_nodo
+    col = x // ancho_nodo
+    return fila, col
 
-    # Dibujar nodos de inicio y fin
-    pygame.draw.rect(ventana, AZUL, (inicio[0] * tamano_celda, inicio[1] * tamano_celda, tamano_celda, tamano_celda))
-    pygame.draw.rect(ventana, VERDE, (fin[0] * tamano_celda, fin[1] * tamano_celda, tamano_celda, tamano_celda))
+# Función principal
+def main(ventana, ancho):
+    FILAS = 10
+    grid = crear_grid(FILAS, ancho)
 
-    # Actualizar la pantalla
-    pygame.display.flip()
+    inicio = None
+    fin = None
+
+    corriendo = True
+
+    while corriendo:
+        dibujar(ventana, grid, FILAS, ancho)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                corriendo = False
+
+            if pygame.mouse.get_pressed()[0]:  # Click izquierdo
+                pos = pygame.mouse.get_pos()
+                fila, col = obtener_click_pos(pos, FILAS, ancho)
+                nodo = grid[fila][col]
+                if not inicio and nodo != fin:
+                    inicio = nodo
+                    inicio.hacer_inicio()
+
+                elif not fin and nodo != inicio:
+                    fin = nodo
+                    fin.hacer_fin()
+
+                elif nodo != fin and nodo != inicio:
+                    nodo.hacer_pared()
+
+            elif pygame.mouse.get_pressed()[2]:  # Click derecho
+                pos = pygame.mouse.get_pos()
+                fila, col = obtener_click_pos(pos, FILAS, ancho)
+                nodo = grid[fila][col]
+                nodo.restablecer()
+                if nodo == inicio:
+                    inicio = None
+                elif nodo == fin:
+                    fin = None
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE and inicio and fin:
+                    for fila in grid:
+                        for nodo in fila:
+                            nodo.actualizar_vecinos(grid)
+
+                    algoritmo_a_estrella(lambda: dibujar(ventana, grid, FILAS, ancho), grid, inicio, fin)
+
+    pygame.quit()
+
+main(VENTANA, ANCHO_VENTANA)
