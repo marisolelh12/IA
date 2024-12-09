@@ -2,8 +2,8 @@ import os
 from PIL import Image
 
 # Ruta al directorio de origen y destino
-source_dir = 'C:/Users/HUAWEI/Documents/ITM/ISC 11Onceavo/IA/cnn/dataset/vocho'
-output_dir = 'C:/Users/HUAWEI/Documents/ITM/ISC 11Onceavo/IA/cnn/dataset/vocho_resized'
+source_dir = 'C:/Users/HUAWEI/Documents/ITM/ISC 11Onceavo/IA/cnn/dataset/sentra'
+output_dir = 'C:/Users/HUAWEI/Documents/ITM/ISC 11Onceavo/IA/cnn/dataset/sentra_resized'
 
 # Crear el directorio de salida si no existe
 if not os.path.exists(output_dir):
@@ -19,7 +19,7 @@ for root, dirs, files in os.walk(source_dir):
             # Leer la imagen con Pillow
             with Image.open(img_path) as img:
                 # Redimensionar la imagen a 128x128
-                img_resized = img.resize((128, 128))
+                img_resized = img.resize((28, 21))
                 
                 # Crear la estructura de directorios de salida
                 relative_path = os.path.relpath(root, source_dir)
