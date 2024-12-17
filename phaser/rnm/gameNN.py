@@ -62,8 +62,8 @@ jugador_frames = [pygame.transform.scale(img, (40, 50)) for img in jugador_frame
 bala_img = pygame.transform.scale(bala_img, (30, 30))
 
 # Crear el rectángulo del jugador y de la bala
-jugador_rect = pygame.Rect(50, h - 100, 40, 50)
-bala_rect = pygame.Rect(w - 100, h - 80, 30, 30)
+jugador_rect = pygame.Rect(50, h - 100, 32, 48)
+bala_rect = pygame.Rect(w - 50, h - 90, 16, 16)
 bala_speed = random.randint(4, 10)
 
 reloj = pygame.time.Clock()
@@ -139,7 +139,7 @@ while correr:
         if bala_rect.x > 0 and en_suelo:
             distance_to_ball = abs(jugador_rect.x - bala_rect.x)
             prediction = nn_model.predict(np.array([[distance_to_ball, bala_speed]]), verbose=0)
-            print(f"Predicción de distance={distance_to_ball}, ={bala_speed}: {prediction[0][0]:.2f}")
+            print(f"Predicción con distance={distance_to_ball}, speed={bala_speed}: {prediction[0][0]:.2f}")
             if prediction[0][0] >= 0.5:
                 print("Salto!")
                 salto = True
@@ -168,7 +168,7 @@ while correr:
         print("Colisión detectada!")
 
         if not auto_mode and len(training_data) > 0:
-            print(f"Datos de formación recopilados: {len(training_data)} samples. Entrenando modelo...")
+            print(f"Datos de entrenamiento recopilados: {len(training_data)} samples. Entrenando modelo...")
             nn_model = train_neural_network_from_data(training_data)
             if nn_model is not None:
                 print("Modelo entrenado con éxito.")
