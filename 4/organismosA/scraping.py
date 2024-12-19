@@ -10,11 +10,8 @@ import html
 
 # Función para limpiar y estructurar texto
 def limpiar_texto(texto):
-    # Decodificar entidades HTML (e.g., &nbsp;, &amp;)
     texto = html.unescape(texto)
-    # Quitar múltiples espacios y saltos de línea
     texto = re.sub(r'\s+', ' ', texto)
-    # Quitar caracteres no deseados excepto letras, números, espacios, puntos y comas
     texto = re.sub(r'[^\w\s.,áéíóúñÁÉÍÓÚÑ]', '', texto)
     return texto.strip()
 
