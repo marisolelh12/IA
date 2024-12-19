@@ -70,12 +70,23 @@ class Nodo:
             self.vecinos.append(grid[self.fila][self.col + 1])
         if self.col > 0 and not grid[self.fila][self.col - 1].es_pared():
             self.vecinos.append(grid[self.fila][self.col - 1])
+        # Diagonales
+        if self.fila > 0 and self.col > 0 and not grid[self.fila - 1][self.col - 1].es_pared():
+            self.vecinos.append(grid[self.fila - 1][self.col - 1])
+        if self.fila > 0 and self.col < self.total_filas - 1 and not grid[self.fila - 1][self.col + 1].es_pared():
+            self.vecinos.append(grid[self.fila - 1][self.col + 1])
+        if self.fila < self.total_filas - 1 and self.col > 0 and not grid[self.fila + 1][self.col - 1].es_pared():
+            self.vecinos.append(grid[self.fila + 1][self.col - 1])
+        if self.fila < self.total_filas - 1 and self.col < self.total_filas - 1 and not grid[self.fila + 1][self.col + 1].es_pared():
+            self.vecinos.append(grid[self.fila + 1][self.col + 1])
 
 # Distancia de Manhattan
 def heuristica(a, b):
     x1, y1 = a
     x2, y2 = b
-    return abs(x1 - x2) + abs(y1 - y2)
+    dx = abs(x1 - x2)
+    dy = abs(y1 - y2)
+    return dx + dy + (1.4 - 2) * min(dx, dy)
 
 # Implementación del algoritmo A*
 def algoritmo_a_estrella(dibujar, grid, inicio, fin):
@@ -105,7 +116,7 @@ def algoritmo_a_estrella(dibujar, grid, inicio, fin):
             return True
 
         for vecino in actual.vecinos:
-            tentative_g_score = g_score[actual] + 1
+            tentative_g_score = g_score[actual] + (1.4 if abs(vecino.fila - actual.fila) + abs(vecino.col - actual.col) == 2 else 1)  # Diagonal: costo 1.4, ortogonal: costo 1
 
             if tentative_g_score < g_score[vecino]:
                 came_from[vecino] = actual
@@ -181,7 +192,7 @@ def obtener_click_pos(pos, filas, ancho):
 
 # Función principal
 def main(ventana, ancho):
-    FILAS = 10
+    FILAS = 7
     grid = crear_grid(FILAS, ancho)
 
     inicio = None
@@ -195,7 +206,7 @@ def main(ventana, ancho):
             if event.type == pygame.QUIT:
                 corriendo = False
 
-            if pygame.mouse.get_pressed()[0]:  # Click izquierdo
+            if pygame.mouse.get_pressed()[0]:
                 pos = pygame.mouse.get_pos()
                 fila, col = obtener_click_pos(pos, FILAS, ancho)
                 nodo = grid[fila][col]
@@ -210,7 +221,7 @@ def main(ventana, ancho):
                 elif nodo != fin and nodo != inicio:
                     nodo.hacer_pared()
 
-            elif pygame.mouse.get_pressed()[2]:  # Click derecho
+            elif pygame.mouse.get_pressed()[2]:
                 pos = pygame.mouse.get_pos()
                 fila, col = obtener_click_pos(pos, FILAS, ancho)
                 nodo = grid[fila][col]
